@@ -32,7 +32,7 @@ func main() {
 
 	//SJFSchedule(os.Stdout, "Shortest-job-first", processes)
 	//
-	//SJFPrioritySchedule(os.Stdout, "Priority", processes)
+	SJFPrioritySchedule(os.Stdout, "Priority", processes)
 	//
 	//RRSchedule(os.Stdout, "Round-robin", processes)
 }
@@ -127,7 +127,25 @@ func FCFSSchedule(w io.Writer, title string, processes []Process) {
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
 }
 
-//func SJFPrioritySchedule(w io.Writer, title string, processes []Process) { }
+func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
+	// var (
+	// 	serviceTime     int64
+	// 	totalWait       float64
+	// 	totalTurnaround float64
+	// 	lastCompletion  float64
+	// 	waitingTime     int64
+	// 	schedule        = make([][]string, len(processes))
+	// 	gantt           = make([]TimeSlice, 0)
+	// )
+
+	//used to store remaining burst times for each process
+	processTimes := make([]int64, len(processes))
+
+	for i := 0; i < len(processes); i++ {
+		processTimes[i] = int64(processes[i].BurstDuration)
+	}
+}
+
 //
 //func SJFSchedule(w io.Writer, title string, processes []Process) { }
 //
