@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -125,6 +126,15 @@ func FCFSSchedule(w io.Writer, title string, processes []Process) {
 	outputTitle(w, title)
 	outputGantt(w, gantt)
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
+}
+
+// Sorting functions
+func sortBurstDuration(processes []Process) []Process {
+	sort.Slice(processes, func(i, j int) bool {
+		return processes[i].BurstDuration < processes[j].BurstDuration
+	})
+
+	return processes
 }
 
 func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
