@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -31,11 +32,14 @@ func main() {
 	// First-come, first-serve scheduling
 	FCFSSchedule(os.Stdout, "First-come, first-serve", processes)
 
+	// Shortest job first
 	SJFSchedule(os.Stdout, "Shortest-job-first", processes)
-	//
+
+	// Shortest job first, priority
 	SJFPrioritySchedule(os.Stdout, "Priority", processes)
-	//
-	//RRSchedule(os.Stdout, "Round-robin", processes)
+
+	// Round robin
+	RRSchedule(os.Stdout, "Round-robin", processes)
 }
 
 func openProcessingFile(args ...string) (*os.File, func(), error) {
@@ -153,6 +157,7 @@ func FCFSSchedule(w io.Writer, title string, processes []Process) {
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
 }
 
+// Shortest job first, priority
 func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 	var (
 		serviceTime     int64
@@ -216,9 +221,9 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 	outputTitle(w, title)
 	outputGantt(w, gantt)
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
-
 }
 
+// Shortest job first
 func SJFSchedule(w io.Writer, title string, processes []Process) {
 	var (
 		serviceTime     int64
@@ -282,11 +287,124 @@ func SJFSchedule(w io.Writer, title string, processes []Process) {
 	outputTitle(w, title)
 	outputGantt(w, gantt)
 	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
-
 }
 
-//
-//func RRSchedule(w io.Writer, title string, processes []Process) { }
+// Round robin
+func RRSchedule(w io.Writer, title string, processes []Process) {
+	var (
+		serviceTime     int64
+		totalWait       float64
+		totalTurnaround float64
+		lastCompletion  float64
+		waitingTime     int64
+		schedule        = make([][]string, len(processes))
+		gantt           = make([]TimeSlice, 0)
+		// Max amount of time that each process can execute before moving onto next process
+		quantumTime int64
+		// Processes completed check
+		procsCompleted int64
+		// Arrays of ints to keep track of the time left and wait times for each process
+		timeLeft  []int64
+		waitTimes []int64
+		// Count to keep track of total number of time units that have elapsed
+		countTimeUnits float64
+		// Sum of wait times
+		sumWaitTimes float64
+		// Minimun calculation var to ensure that no process runs longer than quantumTime
+		min int64
+	)
+
+	processes = sortArrivalTime(processes)
+
+	quantumTime = 3
+	countTimeUnits = 0.0
+	sumWaitTimes = 0.0
+
+	// Create timeLeft array with the burst duration of each process
+	for i := range processes {
+		timeLeft = append(timeLeft, processes[i].BurstDuration)
+		waitTimes = append(waitTimes, 0)
+	}
+
+	for procsCompleted < int64(len(processes)) {
+		// Iterate over processes
+		for i := range processes {
+
+			// If the time left at i is less than zero, continue
+			if timeLeft[i] <= 0 {
+				continue
+			}
+
+			min = int64(math.Min(float64(quantumTime), float64(timeLeft[i])))
+
+			// Calculate and update the waiting time for a process
+			if countTimeUnits > 0 {
+				waitingTime += min
+				waitTimes[i] += min
+			}
+
+			countTimeUnits++
+
+			// Add to total waiting time
+			totalWait += float64(waitingTime)
+
+			// Calculate start time
+			start := waitingTime
+
+			// Calculate turnaround time
+			turnaround := min + waitingTime
+			totalTurnaround += float64(turnaround)
+
+			// Calculate completion time
+			completion := min + waitingTime
+			lastCompletion = float64(completion)
+
+			// Append to schedule
+			schedule = append(schedule, []string{
+				fmt.Sprint(processes[i].ProcessID),
+				fmt.Sprint(processes[i].Priority),
+				fmt.Sprint(processes[i].BurstDuration),
+				fmt.Sprint(processes[i].ArrivalTime),
+				fmt.Sprint(waitingTime),
+				fmt.Sprint(turnaround),
+				fmt.Sprint(completion),
+			})
+
+			// Add to service time
+			serviceTime = start + min
+
+			// Add to GANTT chart
+			gantt = append(gantt, TimeSlice{
+				PID:   processes[i].ProcessID,
+				Start: start,
+				Stop:  serviceTime,
+			})
+
+			// Subtract the min of the quantumTime and the time left at i from the time left at i
+			timeLeft[i] -= min
+
+			// If the time left at i is less than or equal to zero, increment procsCompleted
+			if timeLeft[i] <= 0 {
+				procsCompleted++
+			}
+
+		}
+
+	}
+
+	// Get the sum of the wait times
+	for i := range waitTimes {
+		sumWaitTimes += float64(waitTimes[i])
+	}
+
+	aveWait := sumWaitTimes / float64(len(processes))
+	aveTurnaround := totalTurnaround / countTimeUnits
+	aveThroughput := countTimeUnits / lastCompletion
+
+	outputTitle(w, title)
+	outputGantt(w, gantt)
+	outputSchedule(w, schedule, aveWait, aveTurnaround, aveThroughput)
+}
 
 //endregion
 
