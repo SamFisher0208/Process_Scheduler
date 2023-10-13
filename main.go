@@ -316,7 +316,7 @@ func RRSchedule(w io.Writer, title string, processes []Process) {
 
 	processes = sortArrivalTime(processes)
 
-	quantumTime = 3
+	quantumTime = 5
 	countTimeUnits = 0.0
 	sumWaitTimes = 0.0
 
